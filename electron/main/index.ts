@@ -4,20 +4,14 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
 import { update } from './update'
+import { setupPrinterHandlers } from './printer'
 
 const require = createRequire(import.meta.url)
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// The built directory structure
-//
-// ├─┬ dist-electron
-// │ ├─┬ main
-// │ │ └── index.js    > Electron-Main
-// │ └─┬ preload
-// │   └── index.mjs   > Preload-Scripts
-// ├─┬ dist
-// │ └── index.html    > Electron-Renderer
-//
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+
 process.env.APP_ROOT = path.join(__dirname, '../..')
 
 export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
@@ -40,15 +34,17 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 let win: BrowserWindow | null = null
-const preload = path.join(__dirname, '../preload/index.mjs')
+const preload = path.join(__dirname, '../preload/index.js')
 const indexHtml = path.join(RENDERER_DIST, 'index.html')
 
 async function createWindow() {
   win = new BrowserWindow({
-    title: 'Main window',
+    title: 'QR Printer',
     icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
+    autoHideMenuBar: true,
     webPreferences: {
       preload,
+      devTools: true,
       // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
       // nodeIntegration: true,
 
@@ -76,7 +72,8 @@ async function createWindow() {
     if (url.startsWith('https:')) shell.openExternal(url)
     return { action: 'deny' }
   })
-
+  
+  setupPrinterHandlers()
   // Auto update
   update(win)
 }
